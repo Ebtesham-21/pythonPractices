@@ -1,4 +1,4 @@
 message = ' trying single and "double" commas '
 print(message)
 message2 = " hi"
-print (message.title() + message2)
+print (f"{message} concateneted \n {message2}")
