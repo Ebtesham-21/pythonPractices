@@ -78,5 +78,69 @@ def place_trade(direction):
     request = {
         "action": mt5.TRADE_ACTION_DEAL,
         "symbol": SYMBOL,
-        
+        "volume": LOT_SIZE,
+        "type": order_type,
+        "price": price,
+        "sl": sl,
+        "tp": tp,
+        "deviation": 10,
+        "magic": 1000,
+        "comment": "Python Auto Trade",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": mt5.ORDER_FILLING_IOC
+
     }
+
+    # send order
+    result = mt5.order_send(request)
+    if result.retcode == mt5.TRADE_RETCODE_DONE:
+        print(f"Trade executed:{direction} | Price: {price} | SL: {sl} | TP: {tp}")
+        trades_today +=1
+    else:
+        print(f"Trade failed: {result.comment}")
+
+
+
+ #trading logic
+def trading_strategy():
+    global daily_profit
+    data = get_data(SYMBOL, TIMEFRAME)
+    data = calculate_atr(data)
+
+    # get current price
+    price = mt5.symbol_info_tick(SYMBOL).ask
+    atr_value = data['atr'].iloc[-1]
+
+    # simple trend confirmation with ema
+    data['ema9'] = data['close'].ewm(span=9, adjust=False).mean()
+    data['ema21'] = data['close'].ewm(span=21, adjust=False).mean()
+
+    # supertrend like conditions
+    data['supertrend'] = np.where(data['ema9'] > data ['ema21'], "BUY", "SELL")
+
+    last_signal = data['supertrend'].iloc[-2]
+    current_signal = data['supertrend'].iloc[-1]
+
+    # trade condition
+    if last_signal == "SELL" and current_signal == "BUY":
+        print("Buy signal detected")
+        place_trade("BUY")
+    elif last_signal == "BUY" and current_signal == "SELL":
+        print("Sell signal detected")
+        place_trade("SELL")
+
+
+    # Main loop
+
+    while True:
+        if not check_daily_limit():
+            trading_strategy()
+        else:
+            print(f"Daily profit target reached: {daily_profit}. No more trades today.")
+            time.sleep(86400)
+        time.sleep(60)
+         
+
+
+
+
